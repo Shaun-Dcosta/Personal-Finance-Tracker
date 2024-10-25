@@ -70,9 +70,11 @@ def main(page: ft.Page):
                 user_details=cursor.fetchall()
                 for i in user_details:
                     if uname==i[1] and pwd==i[2]:
-                        print("yup")
-                        os.system('python homepage.py')
                         page.window.destroy()
+                        os.system('python homepage.py')  
+                        page.update()                      
+                        print("yup")
+                        break
                 else:
                     dialog = ft.AlertDialog(
                         title=ft.Text("Log In Unsuccessful"),

@@ -1,182 +1,191 @@
 import flet as ft
-import os
 
 def main(page: ft.Page):
-    page.title = "Homepage"
-    page.padding = 20
-    page.theme_mode = ft.ThemeMode.LIGHT
-    page.bgcolor = "#f0f4f8"
-    page.fonts = {
-        "Roboto": "https://github.com/google/fonts/raw/main/apache/roboto/static/Roboto-Regular.ttf",
-        "Roboto-Bold": "https://github.com/google/fonts/raw/main/apache/roboto/static/Roboto-Bold.ttf"
-    }
-
-    def logout(e):
-        page.dialog = ft.AlertDialog(
-            title=ft.Text("Logout Successful"),
-            content=ft.Text("You have been logged out successfully."),
-            on_dismiss=lambda _: (os.system('python login_signup.py'), page.window_destroy())
-        )
-        page.dialog.open = True
+    page.title = "Personal Finance Tracker"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.padding = 0
+    
+    def toggle_sidebar(e):
+        sidebar.visible = not sidebar.visible
         page.update()
 
-    # AppBar
-    page.appbar = ft.AppBar(
-        leading=ft.Icon(ft.icons.HOME),
-        leading_width=40,
-        title=ft.Text("Homepage"),
-        center_title=False,
-        bgcolor=ft.colors.BLUE_600,
-        actions=[
-            ft.IconButton(ft.icons.WB_SUNNY_OUTLINED),
-            ft.IconButton(ft.icons.FILTER_3),
-            ft.PopupMenuButton(
-                items=[
-                    ft.PopupMenuItem(text="Profile"),
-                    ft.PopupMenuItem(text="Settings"),
-                    ft.PopupMenuItem(),  # divider
-                    ft.PopupMenuItem(text="Logout", on_click=logout),
-                ]
-            ),
-        ],
-    )
+    def logout(e):
+        print("Logout clicked")
 
-    # Welcome message
-    welcome_message = ft.Text(
-        "Welcome to Your Dashboard",
-        size=32,
+    # Pie chart configuration
+    normal_radius = 130
+    hover_radius = 110
+    normal_title_style = ft.TextStyle(
+        size=12, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD
+    )
+    hover_title_style = ft.TextStyle(
+        size=16,
+        color=ft.colors.WHITE,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.BLUE_600,
+        shadow=ft.BoxShadow(blur_radius=2, color=ft.colors.BLACK54),
+    )
+    normal_badge_size = 40
+    hover_badge_size = 50
+
+    def badge(icon, size):
+        return ft.Container(
+            ft.Icon(icon),
+            width=size,
+            height=size,
+            border=ft.border.all(1, ft.colors.BROWN),
+            border_radius=size / 2,
+            bgcolor=ft.colors.WHITE,
+        )
+
+    def create_pie_chart(data, colors, icons):
+        def on_chart_event(e: ft.PieChartEvent):
+            for idx, section in enumerate(chart.sections):
+                if idx == e.section_index:
+                    section.radius = hover_radius
+                    section.title_style = hover_title_style
+                    section.badge.width = hover_badge_size
+                    section.badge.height = hover_badge_size
+                    section.badge.border_radius = hover_badge_size / 2
+                else:
+                    section.radius = normal_radius
+                    section.title_style = normal_title_style
+                    section.badge.width = normal_badge_size
+                    section.badge.height = normal_badge_size
+                    section.badge.border_radius = normal_badge_size / 2
+            chart.update()
+
+        chart = ft.PieChart(
+            sections=[
+                ft.PieChartSection(
+                    value,
+                    title=f"{value}%",
+                    title_style=normal_title_style,
+                    color=color,
+                    radius=normal_radius,
+                    badge=badge(icon, normal_badge_size),
+                    badge_position=0.98,
+                )
+                for value, color, icon in zip(data, colors, icons)
+            ],
+            sections_space=0,
+            center_space_radius=0,
+            on_chart_event=on_chart_event,
+            expand=True,
+        )
+        return chart
+
+    sidebar = ft.Container(
+        content=ft.Column([
+            ft.TextButton("Homepage", on_click=lambda _: print("Homepage clicked")),
+            ft.TextButton("Transactions", on_click=lambda _: print("Transactions clicked")),
+            ft.TextButton("Income", on_click=lambda _: print("Income clicked")),
+            ft.TextButton("Budget", on_click=lambda _: print("Budget clicked")),
+            ft.TextButton("Debts", on_click=lambda _: print("Debts clicked")),
+            ft.TextButton("Goals", on_click=lambda _: print("Goals clicked")),
+        ]),
+        width=200,
+        bgcolor=ft.colors.SURFACE_VARIANT,
+        visible=False
     )
 
-    # Stats
-    stats_row = ft.Row(
-        controls=[
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text("Total Users", size=20, color=ft.colors.BLUE_GREY_400),
-                        ft.Text("1,234", size=36, weight=ft.FontWeight.BOLD),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=5,
-                ),
-                width=200,
-                height=150,
-                bgcolor=ft.colors.WHITE,
-                border_radius=10,
-                shadow=ft.BoxShadow(
-                    spread_radius=1,
-                    blur_radius=10,
-                    color=ft.colors.BLUE_GREY_100,
-                    offset=ft.Offset(0, 0),
-                ),
-            ),
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text("Active Sessions", size=20, color=ft.colors.BLUE_GREY_400),
-                        ft.Text("56", size=36, weight=ft.FontWeight.BOLD),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=5,
-                ),
-                width=200,
-                height=150,
-                bgcolor=ft.colors.WHITE,
-                border_radius=10,
-                shadow=ft.BoxShadow(
-                    spread_radius=1,
-                    blur_radius=10,
-                    color=ft.colors.BLUE_GREY_100,
-                    offset=ft.Offset(0, 0),
-                ),
-            ),
-            ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Text("New Messages", size=20, color=ft.colors.BLUE_GREY_400),
-                        ft.Text("7", size=36, weight=ft.FontWeight.BOLD),
-                    ],
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=5,
-                ),
-                width=200,
-                height=150,
-                bgcolor=ft.colors.WHITE,
-                border_radius=10,
-                shadow=ft.BoxShadow(
-                    spread_radius=1,
-                    blur_radius=10,
-                    color=ft.colors.BLUE_GREY_100,
-                    offset=ft.Offset(0, 0),
-                ),
-            ),
-        ],
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+    top_bar = ft.Container(
+        content=ft.Row([
+            ft.IconButton(ft.icons.MENU, on_click=toggle_sidebar),
+            ft.Text("Financial Management App", size=20, weight=ft.FontWeight.BOLD),
+            ft.Row([
+                ft.IconButton(ft.icons.ACCOUNT_CIRCLE, on_click=lambda _: print("Profile clicked")),
+                ft.IconButton(ft.icons.LOGOUT, on_click=logout),
+            ]),
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+        padding=10,
+        bgcolor=ft.colors.SURFACE_VARIANT,
     )
 
-    # Recent  activity
-    recent_activity = ft.Container(
-        content=ft.Column(
-            [
-                ft.Text("Recent Activity", size=24, weight=ft.FontWeight.BOLD),
+    pie_chart_container = ft.Container(
+        content=ft.Row([
+            ft.Container(
+                content=create_pie_chart(
+                    [40, 30, 15, 15],
+                    [ft.colors.BLUE, ft.colors.YELLOW, ft.colors.PURPLE, ft.colors.GREEN],
+                    [ft.icons.HOME, ft.icons.SHOPPING_CART, ft.icons.DIRECTIONS_CAR, ft.icons.MOVIE]
+                ),
+                width=300,
+                height=300,
+                bgcolor=ft.colors.SURFACE_VARIANT,
+                border_radius=10,
+                alignment=ft.alignment.center,
+            ),
+            ft.Container(
+                content=create_pie_chart(
+                    [35, 25, 20, 20],
+                    [ft.colors.RED, ft.colors.ORANGE, ft.colors.CYAN, ft.colors.PINK],
+                    [ft.icons.ATTACH_MONEY, ft.icons.SAVINGS, ft.icons.CREDIT_CARD, ft.icons.ACCOUNT_BALANCE]
+                ),
+                width=300,
+                height=300,
+                bgcolor=ft.colors.SURFACE_VARIANT,
+                border_radius=10,
+                alignment=ft.alignment.center,
+            ),
+        ], alignment=ft.MainAxisAlignment.SPACE_AROUND),
+        margin=ft.margin.only(top=20),
+    )
+
+    def create_data_table(title, data):
+        return ft.Container(
+            content=ft.Column([
+                ft.Text(title, size=18, weight=ft.FontWeight.BOLD),
                 ft.DataTable(
                     columns=[
-                        ft.DataColumn(ft.Text("User")),
-                        ft.DataColumn(ft.Text("Action")),
-                        ft.DataColumn(ft.Text("Time")),
+                        ft.DataColumn(ft.Text("Date")),
+                        ft.DataColumn(ft.Text("Description")),
+                        ft.DataColumn(ft.Text("Amount")),
                     ],
                     rows=[
-                        ft.DataRow(
-                            cells=[
-                                ft.DataCell(ft.Text("John Doe")),
-                                ft.DataCell(ft.Text("Logged in")),
-                                ft.DataCell(ft.Text("2 minutes ago")),
-                            ],
-                        ),
-                        ft.DataRow(
-                            cells=[
-                                ft.DataCell(ft.Text("Jane Smith")),
-                                ft.DataCell(ft.Text("Updated profile")),
-                                ft.DataCell(ft.Text("15 minutes ago")),
-                            ],
-                        ),
-                        ft.DataRow(
-                            cells=[
-                                ft.DataCell(ft.Text("Bob Johnson")),
-                                ft.DataCell(ft.Text("Sent a message")),
-                                ft.DataCell(ft.Text("1 hour ago")),
-                            ],
-                        ),
+                        ft.DataRow(cells=[ft.DataCell(ft.Text(row[0])), ft.DataCell(ft.Text(row[1])), ft.DataCell(ft.Text(row[2]))]) 
+                        for row in data
                     ],
-                ),
-            ],
-            spacing=20,
-        ),
-        padding=20,
-        bgcolor=ft.colors.WHITE,
-        border_radius=10,
-        shadow=ft.BoxShadow(
-            spread_radius=1,
-            blur_radius=10,
-            color=ft.colors.BLUE_GREY_100,
-            offset=ft.Offset(0, 0),
-        ),
+                )
+            ]),
+            width=400,
+            margin=ft.margin.only(top=20),
+        )
+
+    transactions_data = [
+        ("2023-05-01", "Groceries", "$50.00"),
+        ("2023-05-02", "Gas", "$30.00"),
+        ("2023-05-03", "Dinner", "$45.00"),
+        ("2023-05-04", "Movie", "$20.00"),
+        ("2023-05-05", "Utilities", "$100.00"),
+    ]
+
+    debt_payments_data = [
+        ("2023-05-15", "Credit Card", "$200.00"),
+        ("2023-05-20", "Student Loan", "$150.00"),
+        ("2023-05-25", "Car Loan", "$300.00"),
+        ("2023-05-30", "Mortgage", "$1000.00"),
+        ("2023-06-01", "Personal Loan", "$100.00"),
+    ]
+
+    tables_container = ft.Container(
+        content=ft.Row([
+            create_data_table("Recent Transactions", transactions_data),
+            create_data_table("Upcoming Debt Payments", debt_payments_data),
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+        margin=ft.margin.only(top=20, left=20, right=20),
     )
 
-    # Main content
+    main_content = ft.Column([
+        pie_chart_container,
+        tables_container,
+    ], scroll=ft.ScrollMode.AUTO)
+
     page.add(
-        ft.Column(
-            [
-                welcome_message,
-                ft.Container(height=20),
-                stats_row,
-                ft.Container(height=20),
-                recent_activity,
-            ],
-            spacing=10,
-        )
+        ft.Row([
+            sidebar,
+            ft.VerticalDivider(width=1),
+            ft.Column([top_bar, main_content], expand=True),
+        ], expand=True)
     )
 
 ft.app(target=main)
