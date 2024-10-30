@@ -5,6 +5,7 @@ import mysql.connector as mysql
 con=mysql.connect(host='localhost',user='root',password='mysql@123',database='pft',port='3306')
 cursor=con.cursor()
 
+
 def main(page: ft.Page):
     page.title = "Login and Signup"
     page.padding = 0
@@ -71,7 +72,7 @@ def main(page: ft.Page):
                 for i in user_details:
                     if uname==i[1] and pwd==i[2]:
                         page.window.destroy()
-                        os.system('python homepage.py')  
+                        os.system('python main.py')  
                         page.update()                      
                         print("yup")
                         break

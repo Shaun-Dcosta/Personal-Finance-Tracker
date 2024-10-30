@@ -1,4 +1,8 @@
 import flet as ft
+import mysql.connector as mysql
+
+con=mysql.connect(host='localhost',user='root',password='mysql@123',database='pft',port='3306')
+cursor=con.cursor()
 
 class TransactionsPage(ft.UserControl):
     def __init__(self):
@@ -11,13 +15,14 @@ class TransactionsPage(ft.UserControl):
                     ft.Text(title, size=18, weight=ft.FontWeight.BOLD),
                     ft.DataTable(
                         columns=[
-                            ft.DataColumn(ft.Text("Date")),
-                            ft.DataColumn(ft.Text("Description")),
                             ft.DataColumn(ft.Text("Amount")),
                             ft.DataColumn(ft.Text("Category")),
+                            ft.DataColumn(ft.Text("Timestamp")),
+                            ft.DataColumn(ft.Text("From Account")),
+                            ft.DataColumn(ft.Text("Recepient")),
                         ],
                         rows=[
-                            ft.DataRow(cells=[ft.DataCell(ft.Text(row[0])), ft.DataCell(ft.Text(row[1])), ft.DataCell(ft.Text(row[2])), ft.DataCell(ft.Text(row[3]))]) 
+                            ft.DataRow(cells=[ft.DataCell(ft.Text(row[0])), ft.DataCell(ft.Text(row[1])), ft.DataCell(ft.Text(row[2])), ft.DataCell(ft.Text(row[3])), ft.DataCell(ft.Text(row[4]))]) 
                             for row in data
                         ],
                     )
@@ -26,20 +31,11 @@ class TransactionsPage(ft.UserControl):
                 margin=ft.margin.only(top=20),
             )
 
-        transactions_data = [
-            ("2023-05-01", "Groceries", "$50.00", "Food"),
-            ("2023-05-02", "Gas", "$30.00", "Transportation"),
-            ("2023-05-03", "Dinner", "$45.00", "Food"),
-            ("2023-05-04", "Movie", "$20.00", "Entertainment"),
-            ("2023-05-05", "Utilities", "$100.00", "Bills"),
-            ("2023-05-06", "Clothing", "$75.00", "Shopping"),
-            ("2023-05-07", "Coffee", "$5.00", "Food"),
-            ("2023-05-08", "Gym Membership", "$50.00", "Health"),
-            ("2023-05-09", "Books", "$30.00", "Education"),
-            ("2023-05-10", "Phone Bill", "$60.00", "Bills"),
-        ]
+        pull_transactions="select amount,category,timestamp,acc_number,recepient from transactions"
+        cursor.execute(pull_transactions)
+        transactions_data=cursor.fetchall()
 
-        transactions_table = create_data_table("Recent Transactions", transactions_data)
+        transactions_table = create_data_table("Transaction List", transactions_data)
 
         main_content = ft.Column([
             ft.Text("Transactions", size=32, weight=ft.FontWeight.BOLD),
@@ -47,3 +43,13 @@ class TransactionsPage(ft.UserControl):
         ], scroll=ft.ScrollMode.AUTO)
 
         return main_content
+    
+def main(page: ft.Page):
+    page.title = "Personal Finance Tracker"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.padding = 0
+    
+    transactions_page=TransactionsPage()
+    page.add(transactions_page)
+
+ft.app(target=main)
