@@ -3,26 +3,39 @@ import flet as ft
 class BudgetPage(ft.UserControl):
     def __init__(self):
         super().__init__()
+        self.amount_input = ft.TextField(label="Amount", prefix_text="$", width=150)
+        self.category_dropdown = ft.Dropdown(
+            label="Category",
+            options=[
+                ft.dropdown.Option("Groceries"),
+                ft.dropdown.Option("Water"),
+                ft.dropdown.Option("Electricity"),
+                ft.dropdown.Option("Clothes"),
+                ft.dropdown.Option("Other"),
+            ],
+            width=150,
+        )
+        self.submit_button = ft.ElevatedButton("Add Expense", on_click=self.add_expense)
 
     def build(self):
         def create_pie_chart(data, colors, icons):
-            normal_radius = 100
-            hover_radius = 110
+            normal_radius = 80
+            hover_radius = 90
             normal_title_style = ft.TextStyle(
-                size=12, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD
+                size=10, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD
             )
             hover_title_style = ft.TextStyle(
-                size=16,
+                size=14,
                 color=ft.colors.WHITE,
                 weight=ft.FontWeight.BOLD,
                 shadow=ft.BoxShadow(blur_radius=2, color=ft.colors.BLACK54),
             )
-            normal_badge_size = 40
-            hover_badge_size = 50
+            normal_badge_size = 30
+            hover_badge_size = 40
 
             def badge(icon, size):
                 return ft.Container(
-                    ft.Icon(icon),
+                    ft.Icon(icon, size=14),
                     width=size,
                     height=size,
                     border=ft.border.all(1, ft.colors.BROWN),
@@ -72,8 +85,8 @@ class BudgetPage(ft.UserControl):
                 [ft.colors.BLUE, ft.colors.GREEN, ft.colors.ORANGE, ft.colors.PURPLE, ft.colors.PINK],
                 [ft.icons.HOME, ft.icons.FASTFOOD, ft.icons.DIRECTIONS_CAR, ft.icons.SHOPPING_BAG, ft.icons.MOVIE]
             ),
-            width=400,
-            height=400,
+            width=300,
+            height=300,
             bgcolor=ft.colors.SURFACE_VARIANT,
             border_radius=10,
             alignment=ft.alignment.center,
@@ -82,7 +95,7 @@ class BudgetPage(ft.UserControl):
         def create_data_table(title, data):
             return ft.Container(
                 content=ft.Column([
-                    ft.Text(title, size=18, weight=ft.FontWeight.BOLD),
+                    ft.Text(title, size=16, weight=ft.FontWeight.BOLD),
                     ft.DataTable(
                         columns=[
                             ft.DataColumn(ft.Text("Category")),
@@ -96,8 +109,8 @@ class BudgetPage(ft.UserControl):
                         ],
                     )
                 ]),
-                width=400,
-                margin=ft.margin.only(top=20),
+                width=300,
+                margin=ft.margin.only(top=10),
             )
 
         budget_data = [
@@ -110,9 +123,40 @@ class BudgetPage(ft.UserControl):
 
         budget_table = create_data_table("Budget Breakdown", budget_data)
 
-        main_content = ft.Column([
-            ft.Text("Budget Overview", size=32, weight=ft.FontWeight.BOLD),
-            ft.Row([budget_chart, budget_table], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-        ], scroll=ft.ScrollMode.AUTO)
+        input_form = ft.Column([
+            ft.Text("Add New Expense", size=20, weight=ft.FontWeight.BOLD),
+            ft.Row([
+                self.amount_input,
+                self.category_dropdown,
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            self.submit_button,
+        ], spacing=10)
+
+        main_content = ft.ResponsiveRow([
+            ft.Column([
+                ft.Text("Budget Overview", size=28, weight=ft.FontWeight.BOLD),
+                budget_chart,
+                budget_table,
+            ], col={"sm": 12, "md": 6}),
+            ft.Column([input_form], col={"sm": 12, "md": 6}),
+        ], spacing=10)
 
         return main_content
+
+    def add_expense(self, e):
+        print("Amount:", self.amount_input.value)
+        print("Category:", self.category_dropdown.value)
+        self.amount_input.value = ""
+        self.category_dropdown.value = None
+        self.update()
+
+def main(page: ft.Page):
+    page.title = "Personal Finance Tracker"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.padding = 10
+    page.scroll = ft.ScrollMode.AUTO
+    
+    budget_page = BudgetPage()
+    page.add(budget_page)
+
+ft.app(target=main)
