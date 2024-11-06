@@ -1,8 +1,10 @@
 import flet as ft
+from datetime import datetime
 
 class DebtsPage(ft.UserControl):
     def __init__(self):
         super().__init__()
+        self.debt_data = []
 
     def build(self):
         def create_pie_chart(data, colors, icons):
@@ -85,33 +87,95 @@ class DebtsPage(ft.UserControl):
                     ft.Text(title, size=18, weight=ft.FontWeight.BOLD),
                     ft.DataTable(
                         columns=[
-                            ft.DataColumn(ft.Text("Debt Type")),
-                            ft.DataColumn(ft.Text("Balance")),
-                            ft.DataColumn(ft.Text("Interest Rate")),
-                            ft.DataColumn(ft.Text("Monthly Payment")),
+                            ft.DataColumn(ft.Text("Type")),
+                            ft.DataColumn(ft.Text("Amount")),
+                            ft.DataColumn(ft.Text("Due Date")),
+                            ft.DataColumn(ft.Text("Status")),
                         ],
                         rows=[
-                            ft.DataRow(cells=[ft.DataCell(ft.Text(row[0])), ft.DataCell(ft.Text(row[1])), ft.DataCell(ft.Text(row[2])), ft.DataCell(ft.Text(row[3]))]) 
+                            ft.DataRow(
+                                cells=[
+                                    ft.DataCell(ft.Text(row[0])),
+                                    ft.DataCell(ft.Text(f"${row[1]:.2f}")),
+                                    ft.DataCell(ft.Text(row[2].strftime("%Y-%m-%d"))),
+                                    ft.DataCell(ft.Text(row[3]))
+                                ]
+                            ) 
                             for row in data
                         ],
                     )
                 ]),
-                width=400,
+                width=600,
                 margin=ft.margin.only(top=20),
             )
 
-        debt_data = [
-            ("Mortgage", "$200,000", "3.5%", "$1,500"),
-            ("Credit Card", "$5,000", "18%", "$200"),
-            ("Student Loan", "$30,000", "5%", "$300"),
-            ("Car Loan", "$15,000", "4%", "$250"),
-        ]
+        self.debt_table = create_data_table("Debt Details", self.debt_data)
 
-        debt_table = create_data_table("Debt Details", debt_data)
+        def add_debt(e):
+            if not amount.value or not due_date.value:
+                return
+            
+            new_debt = (
+                debt_type.value,
+                float(amount.value),
+                datetime.strptime(due_date.value, "%Y-%m-%d"),
+                status.value
+            )
+            self.debt_data.append(new_debt)
+            self.debt_table.content.controls[1].rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(new_debt[0])),
+                        ft.DataCell(ft.Text(f"${new_debt[1]:.2f}")),
+                        ft.DataCell(ft.Text(new_debt[2].strftime("%Y-%m-%d"))),
+                        ft.DataCell(ft.Text(new_debt[3]))
+                    ]
+                )
+            )
+            amount.value = ""
+            due_date.value = ""
+            self.debt_table.update()
+
+        amount = ft.TextField(label="Amount", width=150)
+        debt_type = ft.Dropdown(
+            label="Type",
+            width=150,
+            options=[
+                ft.dropdown.Option("Loan"),
+                ft.dropdown.Option("Credit Card"),
+                ft.dropdown.Option("Mortgage"),
+            ],
+        )
+        due_date = ft.TextField(label="Due Date (YYYY-MM-DD)", width=200)
+        status = ft.Dropdown(
+            label="Status",
+            width=150,
+            options=[
+                ft.dropdown.Option("Completed"),
+                ft.dropdown.Option("Due"),
+            ],
+        )
+
+        input_row = ft.Row(
+            [amount, debt_type, due_date, status, ft.ElevatedButton("Add Debt", on_click=add_debt)],
+            alignment=ft.MainAxisAlignment.CENTER,
+        )
 
         main_content = ft.Column([
             ft.Text("Debt Overview", size=32, weight=ft.FontWeight.BOLD),
-            ft.Row([debt_chart, debt_table], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Row([debt_chart, self.debt_table], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            input_row,
         ], scroll=ft.ScrollMode.AUTO)
 
         return main_content
+    
+def main(page: ft.Page):
+    page.title = "Personal Finance Tracker"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.padding = 10
+    page.scroll = ft.ScrollMode.AUTO
+    
+    debts_page = DebtsPage()
+    page.add(debts_page)
+
+ft.app(target=main)
