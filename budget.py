@@ -3,6 +3,7 @@ import flet as ft
 class BudgetPage(ft.UserControl):
     def __init__(self):
         super().__init__()
+        self.sidebar = None
         self.amount_input = ft.TextField(label="Amount", prefix_text="$", width=150)
         self.category_dropdown = ft.Dropdown(
             label="Category",
@@ -16,6 +17,13 @@ class BudgetPage(ft.UserControl):
             width=150,
         )
         self.submit_button = ft.ElevatedButton("Add Expense", on_click=self.add_expense)
+
+    def toggle_sidebar(self, e):
+        self.sidebar.visible = not self.sidebar.visible
+        self.update()
+
+    def logout(self, e):
+        print("Logout clicked")
 
     def build(self):
         def create_pie_chart(data, colors, icons):
@@ -141,7 +149,41 @@ class BudgetPage(ft.UserControl):
             ft.Column([input_form], col={"sm": 12, "md": 6}),
         ], spacing=10)
 
-        return main_content
+        # Sidebar
+        self.sidebar = ft.Container(
+            content=ft.Column([
+                ft.TextButton("Homepage", on_click=lambda _: print("Homepage clicked")),
+                ft.TextButton("Transactions", on_click=lambda _: print("Transactions clicked")),
+                ft.TextButton("Income", on_click=lambda _: print("Income clicked")),
+                ft.TextButton("Budget", on_click=lambda _: print("Budget clicked")),
+                ft.TextButton("Debts", on_click=lambda _: print("Debts clicked")),
+                ft.TextButton("Goals", on_click=lambda _: print("Goals clicked")),
+            ]),
+            width=200,
+            height=770,
+            bgcolor=ft.colors.SURFACE_VARIANT,
+            visible=False
+        )
+
+        # Top bar
+        top_bar = ft.Container(
+            content=ft.Row([
+                ft.IconButton(ft.icons.MENU, on_click=self.toggle_sidebar),
+                ft.Text("Financial Management App", size=20, weight=ft.FontWeight.BOLD),
+                ft.Row([
+                    ft.IconButton(ft.icons.ACCOUNT_CIRCLE, on_click=lambda _: print("Profile clicked")),
+                    ft.IconButton(ft.icons.LOGOUT, on_click=self.logout),
+                ]),
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            padding=10,
+            bgcolor=ft.colors.SURFACE_VARIANT,
+        )
+
+        return ft.Row([
+            self.sidebar,
+            ft.VerticalDivider(width=1),
+            ft.Column([top_bar, main_content], expand=True),
+        ], expand=True)
 
     def add_expense(self, e):
         print("Amount:", self.amount_input.value)
@@ -153,7 +195,7 @@ class BudgetPage(ft.UserControl):
 def main(page: ft.Page):
     page.title = "Personal Finance Tracker"
     page.theme_mode = ft.ThemeMode.DARK
-    page.padding = 10
+    page.padding = 0
     page.scroll = ft.ScrollMode.AUTO
     
     budget_page = BudgetPage()
