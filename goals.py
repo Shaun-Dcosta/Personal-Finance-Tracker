@@ -1,14 +1,41 @@
 import flet as ft
+import mysql.connector as mysql
+from datetime import datetime
+
+# Connect to MySQL database
+con = mysql.connect(host='localhost', user='root', password='mysql@123', database='pft', port='3306')
+cursor = con.cursor()
 
 class GoalsPage(ft.UserControl):
-    def __init__(self):
+    def __init__(self, username:str):
         super().__init__()
-        self.goals = []
+        self.username=username
+        query = "SELECT user_id FROM user WHERE username = %s"
+        cursor.execute(query, (self.username,))
+        self.user_id = cursor.fetchone()[0]
+        self.goals = self.fetch_goals()
+
+    def fetch_goals(self):
+        # Fetch initial goals data from MySQL
+        query = "SELECT type, target, amount_saved, status, doc, target_date FROM goals WHERE user_id = %s"
+        cursor.execute(query, (self.user_id,))
+        goals_data = cursor.fetchall()
+        return [
+            {
+                "type": row[0],
+                "target": row[1],
+                "amount_saved": row[2],
+                "status": row[3],
+                "creation_date": row[4].strftime("%Y-%m-%d"),
+                "target_date": row[5].strftime("%Y-%m-%d")
+            } for row in goals_data
+        ]
 
     def build(self):
+        # Function to create a goal card UI component
         def create_goal_card(goal, index):
-            progress = goal["amount_saved"] / goal["target"]
-            
+            progress = goal["amount_saved"] / goal["target"] if goal["target"] > 0 else 0
+
             def update_goal(e):
                 updated_goal = {
                     "type": goal_type_update.value,
@@ -18,9 +45,30 @@ class GoalsPage(ft.UserControl):
                     "creation_date": creation_date_update.value,
                     "target_date": target_date_update.value,
                 }
+
+                # Update MySQL database
+                query = """
+                    UPDATE goals
+                    SET type = %s, target = %s, amount_saved = %s, status = %s, doc = %s, target_date = %s
+                    WHERE user_id = %s AND type = %s
+                """
+                cursor.execute(query, (
+                    updated_goal["type"],
+                    updated_goal["target"],
+                    updated_goal["amount_saved"],
+                    updated_goal["status"],
+                    updated_goal["creation_date"],
+                    updated_goal["target_date"],
+                    self.user_id,
+                    goal["type"]
+                ))
+                con.commit()
+
+                # Update goal in memory and refresh the UI
                 self.goals[index] = updated_goal
                 update_goals_list()
 
+            # Input fields to edit a goal
             goal_type_update = ft.TextField(value=goal["type"], width=100, height=35)
             target_update = ft.TextField(value=str(goal["target"]), width=80, height=35)
             amount_saved_update = ft.TextField(value=str(goal["amount_saved"]), width=80, height=35)
@@ -36,6 +84,7 @@ class GoalsPage(ft.UserControl):
             creation_date_update = ft.TextField(value=goal["creation_date"], width=100, height=35)
             target_date_update = ft.TextField(value=goal["target_date"], width=100, height=35)
 
+            # Create goal card layout
             return ft.Container(
                 content=ft.Row([
                     ft.Column([
@@ -81,6 +130,24 @@ class GoalsPage(ft.UserControl):
                 "creation_date": creation_date.value,
                 "target_date": target_date.value,
             }
+
+            # Insert new goal into MySQL database
+            query = """
+                INSERT INTO goals (user_id, type, target, amount_saved, status, doc, target_date)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(query, (
+                self.user_id,
+                new_goal["type"],
+                new_goal["target"],
+                new_goal["amount_saved"],
+                new_goal["status"],
+                new_goal["creation_date"],
+                new_goal["target_date"],
+            ))
+            con.commit()
+
+            # Add goal to list and refresh UI
             self.goals.append(new_goal)
             update_goals_list()
 
@@ -93,6 +160,7 @@ class GoalsPage(ft.UserControl):
             target_date.value = ""
             self.update()
 
+        # Input fields for adding a new goal
         goal_type = ft.TextField(label="Goal Type", width=150, height=35)
         target = ft.TextField(label="Target Amount", width=120, height=35)
         amount_saved = ft.TextField(label="Amount Saved", width=120, height=35)
@@ -136,7 +204,7 @@ def main(page: ft.Page):
     page.padding = 10
     page.scroll = ft.ScrollMode.AUTO
     
-    goals_page = GoalsPage()
+    goals_page = GoalsPage('test')  # Replace with actual user_id
     page.add(goals_page)
 
 ft.app(target=main)

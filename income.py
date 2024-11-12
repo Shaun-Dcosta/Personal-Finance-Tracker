@@ -1,9 +1,17 @@
 import flet as ft
 from datetime import datetime
+import mysql.connector as mysql
+
+con = mysql.connect(host='localhost', user='root', password='mysql@123', database='pft', port='3306')
+cursor = con.cursor()
 
 class IncomePage(ft.UserControl):
-    def __init__(self):
+    def __init__(self, username: str):
         super().__init__()
+        self.username = username
+        y = "select user_id from user where username=%s"
+        cursor.execute(y, (self.username,))
+        self.user_id = cursor.fetchone()[0]
         self.sidebar = None
         self.amount_input = ft.TextField(label="Amount", prefix_text="$", width=200)
         self.type_dropdown = ft.Dropdown(
@@ -28,16 +36,7 @@ class IncomePage(ft.UserControl):
             icon=ft.icons.CALENDAR_TODAY,
             on_click=lambda _: self.date_picker.pick_date(),
         )
-        self.accounts_dropdown = ft.Dropdown(
-            label="Account",
-            options=[
-                ft.dropdown.Option("Checking Account"),
-                ft.dropdown.Option("Savings Account"),
-                ft.dropdown.Option("Investment Account"),
-                ft.dropdown.Option("Cash"),
-            ],
-            width=200,
-        )
+        self.account_input = ft.TextField(label="Account Number", width=200, keyboard_type=ft.KeyboardType.NUMBER)
         self.submit_button = ft.ElevatedButton("Add Income", on_click=self.add_income)
 
     def toggle_sidebar(self, e):
@@ -128,12 +127,13 @@ class IncomePage(ft.UserControl):
                     ft.Text(title, size=16, weight=ft.FontWeight.BOLD),
                     ft.DataTable(
                         columns=[
-                            ft.DataColumn(ft.Text("Source")),
+                            ft.DataColumn(ft.Text("Type")),
                             ft.DataColumn(ft.Text("Amount")),
-                            ft.DataColumn(ft.Text("Frequency")),
+                            ft.DataColumn(ft.Text("Timestamp")),
+                            ft.DataColumn(ft.Text("Account Number")),
                         ],
                         rows=[
-                            ft.DataRow(cells=[ft.DataCell(ft.Text(row[0])), ft.DataCell(ft.Text(row[1])), ft.DataCell(ft.Text(row[2]))]) 
+                            ft.DataRow(cells=[ft.DataCell(ft.Text(row[0])), ft.DataCell(ft.Text(row[1])), ft.DataCell(ft.Text(row[2])), ft.DataCell(ft.Text(row[3]))]) 
                             for row in data
                         ],
                     )
@@ -142,12 +142,9 @@ class IncomePage(ft.UserControl):
                 margin=ft.margin.only(top=10),
             )
 
-        income_data = [
-            ("Salary", "$4,000", "Monthly"),
-            ("Freelance", "$800", "Monthly"),
-            ("Investments", "$600", "Monthly"),
-            ("Gifts", "$200", "Annually"),
-        ]
+        pull_income = "SELECT type,amount,timestamp,acc_number from income where user_id=%s"
+        cursor.execute(pull_income, (self.user_id,))
+        income_data = cursor.fetchall()
 
         income_table = create_data_table("Income Sources", income_data)
 
@@ -164,7 +161,7 @@ class IncomePage(ft.UserControl):
                 ft.Text("Selected date: ", weight=ft.FontWeight.BOLD),
                 ft.Text(ref=self.date_picker.value),
             ]),
-            self.accounts_dropdown,
+            self.account_input,
             self.submit_button,
         ], spacing=10, width=400)
 
@@ -213,15 +210,52 @@ class IncomePage(ft.UserControl):
         ], expand=True)
 
     def add_income(self, e):
-        print("Amount:", self.amount_input.value)
-        print("Type:", self.type_dropdown.value)
-        print("Date:", self.date_picker.value.value)
-        print("Account:", self.accounts_dropdown.value)
+        # Get the input values
+        amount = self.amount_input.value
+        income_type = self.type_dropdown.value
+        timestamp = self.date_picker.value
+        account_number = self.account_input.value
 
+        if not amount or not income_type or not timestamp or not account_number:
+            return
+
+        income_insert = "INSERT INTO income(type, amount, timestamp, acc_number, user_id) VALUES (%s, %s, %s, %s, %s)"
+        cursor.execute(income_insert, (income_type, amount, timestamp, account_number, self.user_id))
+        con.commit()
+
+        # Clear the input fields
         self.amount_input.value = ""
         self.type_dropdown.value = None
         self.date_picker.value.value = None
-        self.accounts_dropdown.value = None
+        self.account_input.value = ""
+        
+        # Re-fetch updated income data
+        pull_income = "SELECT type, amount, timestamp, acc_number FROM income WHERE user_id=%s"
+        cursor.execute(pull_income, (self.user_id,))
+        updated_income_data = cursor.fetchall()
+
+        # Rebuild the income table with the new data
+        self.income_table.content = ft.Column([
+            ft.Text("Income Sources", size=16, weight=ft.FontWeight.BOLD),
+            ft.DataTable(
+                columns=[
+                    ft.DataColumn(ft.Text("Type")),
+                    ft.DataColumn(ft.Text("Amount")),
+                    ft.DataColumn(ft.Text("Timestamp")),
+                    ft.DataColumn(ft.Text("Account Number")),
+                ],
+                rows=[
+                    ft.DataRow(cells=[
+                        ft.DataCell(ft.Text(row[0])),
+                        ft.DataCell(ft.Text(row[1])),
+                        ft.DataCell(ft.Text(row[2])),
+                        ft.DataCell(ft.Text(row[3]))
+                    ]) for row in updated_income_data
+                ],
+            )
+        ])
+    
+
         self.update()
 
 def main(page: ft.Page):
@@ -230,7 +264,7 @@ def main(page: ft.Page):
     page.padding = 0
     page.scroll = ft.ScrollMode.AUTO
     
-    income_page = IncomePage()
+    income_page = IncomePage("test")
     page.add(income_page)
     page.overlay.append(income_page.date_picker)
     page.update()

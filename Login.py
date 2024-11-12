@@ -1,5 +1,6 @@
 import flet as ft
 import os
+from homepage import HomePage
 import mysql.connector as mysql
 
 con=mysql.connect(host='localhost',user='root',password='mysql@123',database='pft',port='3306')
@@ -30,6 +31,19 @@ def main(page: ft.Page):
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 )
             )
+        elif page.route == "/home":
+            try:
+                home_page = HomePage(page.client_storage.get("username"))
+                page.views.append(
+                    ft.View(
+                        "/home",
+                        [home_page],
+                        vertical_alignment=ft.MainAxisAlignment.CENTER,
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    )
+                )
+            except Exception as e:
+                print(f"Error creating HomePage: {e}")  # Debug print
         else:
             page.views.append(
                 ft.View(
@@ -61,34 +75,30 @@ def main(page: ft.Page):
                 password.error_text = "Password cannot be empty"
                 page.update()
             else:
-                page.splash = ft.ProgressBar()
                 page.update()
-                page.splash = None
-                uname=username.value
-                pwd=password.value
-                pull_user="select*from user"
+                uname = username.value
+                pwd = password.value
+                pull_user = "SELECT * FROM user"
                 cursor.execute(pull_user)
-                user_details=cursor.fetchall()
+                user_details = cursor.fetchall()
                 for i in user_details:
-                    if uname==i[1] and pwd==i[2]:
-                        page.window.destroy()
-                        os.system('python main.py')  
-                        page.update()                      
-                        print("yup")
-                        break
-                else:
-                    dialog = ft.AlertDialog(
-                        title=ft.Text("Log In Unsuccessful"),
-                        content=ft.Text("Check your credentials"),
-                    )
-                    page.dialog = dialog
-                    dialog.open = True
-                    page.update()
+                    if uname == i[1] and pwd == i[2]:
+                        page.splash = None
+                        page.client_storage.set("username", uname)
+                        page.go("/home")
+                        return
+                page.splash = None
+                dialog = ft.AlertDialog(
+                    title=ft.Text("Log In Unsuccessful"),
+                    content=ft.Text("Check your credentials"),
+                )
+                page.dialog = dialog
+                dialog.open = True
+                page.update()
 
-        # Logo
+
         logo = ft.Icon(ft.icons.LOCK_OUTLINE, size=80, color=ft.colors.BLUE_600)
 
-        # Input fields
         username = ft.TextField(
             label="Username",
             border=ft.InputBorder.UNDERLINE,
@@ -104,18 +114,6 @@ def main(page: ft.Page):
             text_style=ft.TextStyle(font_family="Roboto"),
         )
 
-        # Remember me checkbox
-        remember_me = ft.Checkbox(label="Remember me", value=False)
-
-        # Forgot password link
-        forgot_password = ft.Text(
-            "Forgot password?",
-            color=ft.colors.BLUE_600,
-            weight=ft.FontWeight.BOLD,
-            size=12,
-        )
-
-        # Login button
         login_button = ft.ElevatedButton(
             content=ft.Text(
                 "Login",
@@ -170,11 +168,6 @@ def main(page: ft.Page):
                     ft.Container(height=10),
                     password,
                     ft.Container(height=10),
-                    ft.Row(
-                        [remember_me, forgot_password],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        width=300,
-                    ),
                     ft.Container(height=20),
                     login_button,
                     ft.Container(height=10),

@@ -1,8 +1,18 @@
 import flet as ft
+import mysql.connector as mysql
+from datetime import datetime
+
+# Connect to MySQL database
+con = mysql.connect(host='localhost', user='root', password='mysql@123', database='pft', port='3306')
+cursor = con.cursor()
 
 class BudgetPage(ft.UserControl):
-    def __init__(self):
+    def __init__(self, username: str):
         super().__init__()
+        self.username = username
+        y="select user_id from user where username=%s"
+        cursor.execute(y,(self.username,))
+        self.user_id=cursor.fetchone()[0]
         self.sidebar = None
         self.amount_input = ft.TextField(label="Amount", prefix_text="$", width=150)
         self.category_dropdown = ft.Dropdown(
@@ -17,6 +27,7 @@ class BudgetPage(ft.UserControl):
             width=150,
         )
         self.submit_button = ft.ElevatedButton("Add Expense", on_click=self.add_expense)
+        self.budget_table = None 
 
     def toggle_sidebar(self, e):
         self.sidebar.visible = not self.sidebar.visible
@@ -100,36 +111,7 @@ class BudgetPage(ft.UserControl):
             alignment=ft.alignment.center,
         )
 
-        def create_data_table(title, data):
-            return ft.Container(
-                content=ft.Column([
-                    ft.Text(title, size=16, weight=ft.FontWeight.BOLD),
-                    ft.DataTable(
-                        columns=[
-                            ft.DataColumn(ft.Text("Category")),
-                            ft.DataColumn(ft.Text("Allocated")),
-                            ft.DataColumn(ft.Text("Spent")),
-                            ft.DataColumn(ft.Text("Remaining")),
-                        ],
-                        rows=[
-                            ft.DataRow(cells=[ft.DataCell(ft.Text(row[0])), ft.DataCell(ft.Text(row[1])), ft.DataCell(ft.Text(row[2])), ft.DataCell(ft.Text(row[3]))]) 
-                            for row in data
-                        ],
-                    )
-                ]),
-                width=300,
-                margin=ft.margin.only(top=10),
-            )
-
-        budget_data = [
-            ("Housing", "$1,000", "$950", "$50"),
-            ("Food", "$500", "$450", "$50"),
-            ("Transportation", "$400", "$380", "$20"),
-            ("Shopping", "$300", "$250", "$50"),
-            ("Entertainment", "$200", "$180", "$20"),
-        ]
-
-        budget_table = create_data_table("Budget Breakdown", budget_data)
+        self.budget_table = self.create_data_table("Budget Breakdown", self.fetch_budget_data())
 
         input_form = ft.Column([
             ft.Text("Add New Expense", size=20, weight=ft.FontWeight.BOLD),
@@ -144,7 +126,7 @@ class BudgetPage(ft.UserControl):
             ft.Column([
                 ft.Text("Budget Overview", size=28, weight=ft.FontWeight.BOLD),
                 budget_chart,
-                budget_table,
+                self.budget_table,
             ], col={"sm": 12, "md": 6}),
             ft.Column([input_form], col={"sm": 12, "md": 6}),
         ], spacing=10)
@@ -185,12 +167,64 @@ class BudgetPage(ft.UserControl):
             ft.Column([top_bar, main_content], expand=True),
         ], expand=True)
 
+    def create_data_table(self, title, data):
+        return ft.Container(
+            content=ft.Column([
+                ft.Text(title, size=16, weight=ft.FontWeight.BOLD),
+                ft.DataTable(
+                    columns=[
+                        ft.DataColumn(ft.Text("Category")),
+                        ft.DataColumn(ft.Text("Allocated")),
+                        
+                    ],
+                    rows=[
+                        ft.DataRow(cells=[
+                            ft.DataCell(ft.Text(row[0])),
+                            ft.DataCell(ft.Text(row[1])),
+                        ]) for row in data
+                    ],
+                )
+            ]),
+            width=300,
+            margin=ft.margin.only(top=10),
+        )
+
+    def fetch_budget_data(self):
+        query = "SELECT category,amount FROM budgets WHERE user_id=%s"
+        cursor.execute(query, (self.user_id,))
+        return cursor.fetchall()
+
     def add_expense(self, e):
-        print("Amount:", self.amount_input.value)
-        print("Category:", self.category_dropdown.value)
-        self.amount_input.value = ""
-        self.category_dropdown.value = None
-        self.update()
+        amount = self.amount_input.value
+        category = self.category_dropdown.value
+
+        if amount and category:
+            expense_insert = "INSERT INTO budgets(category, amount,user_id) VALUES(%s, %s, %s)"
+            cursor.execute(expense_insert, (category, amount,self.user_id))
+            con.commit()
+
+            self.budget_table.content = ft.Column([
+                ft.Text("Budget Breakdown", size=16, weight=ft.FontWeight.BOLD),
+                ft.DataTable(
+                    columns=[
+                        ft.DataColumn(ft.Text("Category")),
+                        ft.DataColumn(ft.Text("Allocated")),
+                    ],
+                    rows=[
+                        ft.DataRow(cells=[
+                            ft.DataCell(ft.Text(row[0])),
+                            ft.DataCell(ft.Text(row[1])),
+                        ]) for row in self.fetch_budget_data()
+                    ],
+                )
+            ])
+
+            self.amount_input.value = ""
+            self.category_dropdown.value = None
+            self.update()
+        else:
+            print("Incomplete fields for adding expense")
+            return
 
 def main(page: ft.Page):
     page.title = "Personal Finance Tracker"
@@ -198,7 +232,7 @@ def main(page: ft.Page):
     page.padding = 0
     page.scroll = ft.ScrollMode.AUTO
     
-    budget_page = BudgetPage()
+    budget_page = BudgetPage(username="test") 
     page.add(budget_page)
-
+    page.update()
 ft.app(target=main)

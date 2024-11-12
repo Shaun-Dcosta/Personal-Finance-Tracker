@@ -1,12 +1,21 @@
 import flet as ft
 import mysql.connector as mysql
+from transactions import TransactionsPage
 
-con=mysql.connect(host='localhost',user='root',password='mysql@123',database='pft',port='3306')
-cursor=con.cursor()
+con = mysql.connect(
+    host='localhost',
+    user='root',
+    password='mysql@123',
+    database='pft',
+    port='3306'
+)
+cursor = con.cursor()
 
-class HomePage(ft.UserControl):
-    def __init__(self):
+class HomePage(ft.UserControl):    
+    def __init__(self, username: str):
         super().__init__()
+        self.username = username
+        print(self.username)
         self.sidebar = None
         self.normal_radius = 130
         self.hover_radius = 10
@@ -97,10 +106,16 @@ class HomePage(ft.UserControl):
         )
 
     def build(self):
+        def open_transactions_page(e):
+            transactions_page = TransactionsPage(self.username)
+            self.page.clean()
+            self.page.add(transactions_page)
+            self.page.update()
+
         self.sidebar = ft.Container(
             content=ft.Column([
                 ft.TextButton("Homepage", on_click=lambda _: print("Homepage clicked")),
-                ft.TextButton("Transactions", on_click=lambda _: print("Transactions clicked")),
+                ft.TextButton("Transactions", on_click=open_transactions_page),  # Modified this line
                 ft.TextButton("Income", on_click=lambda _: print("Income clicked")),
                 ft.TextButton("Budget", on_click=lambda _: print("Budget clicked")),
                 ft.TextButton("Debts", on_click=lambda _: print("Debts clicked")),
@@ -117,6 +132,7 @@ class HomePage(ft.UserControl):
                 ft.IconButton(ft.icons.MENU, on_click=self.toggle_sidebar),
                 ft.Text("Financial Management App", size=20, weight=ft.FontWeight.BOLD),
                 ft.Row([
+                    ft.Text(f"Welcome, {self.username}", size=16),
                     ft.IconButton(ft.icons.ACCOUNT_CIRCLE, on_click=lambda _: print("Profile clicked")),
                     ft.IconButton(ft.icons.LOGOUT, on_click=self.logout),
                 ]),
@@ -189,13 +205,12 @@ class HomePage(ft.UserControl):
             ft.VerticalDivider(width=1),
             ft.Column([top_bar, main_content], expand=True),
         ], expand=True)
-
-def main(page: ft.Page):
-    page.title = "Personal Finance Tracker"
-    page.theme_mode = ft.ThemeMode.DARK
-    page.padding = 0
     
-    home_page = HomePage()
-    page.add(home_page)
-
-ft.app(target=main)
+# def init_homepage(page: ft.Page, username: str):
+#     page.title = "Personal Finance Tracker"
+#     page.theme_mode = ft.ThemeMode.DARK
+#     page.padding = 0
+    
+#     home_page = HomePage(username)
+#     page.add(home_page)
+#     page.update()

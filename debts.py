@@ -1,24 +1,37 @@
 import flet as ft
 from datetime import datetime
+import mysql.connector as mysql
+
+# Connect to MySQL database
+con = mysql.connect(host='localhost', user='root', password='mysql@123', database='pft', port='3306')
+cursor = con.cursor()
+
 
 class DebtsPage(ft.UserControl):
-    def __init__(self):
+    def __init__(self, username: str):
+        self.username = username
+        # Fetch user_id based on username
+        query = "SELECT user_id FROM user WHERE username = %s"
+        cursor.execute(query, (self.username,))
+        self.user_id = cursor.fetchone()[0]
         super().__init__()
-        self.debt_data = []
+
+        # Fetch initial debt data from MySQL
+        self.debt_data = self.fetch_debt_data()
+
+    def fetch_debt_data(self):
+        query = "SELECT type, amount, due_date, status FROM debts WHERE user_id = %s"
+        cursor.execute(query, (self.user_id,))
+        return cursor.fetchall()
 
     def build(self):
+        # Create pie chart (no changes needed here)
         def create_pie_chart(data, colors, icons):
             normal_radius = 100
             hover_radius = 110
-            normal_title_style = ft.TextStyle(
-                size=12, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD
-            )
-            hover_title_style = ft.TextStyle(
-                size=16,
-                color=ft.colors.WHITE,
-                weight=ft.FontWeight.BOLD,
-                shadow=ft.BoxShadow(blur_radius=2, color=ft.colors.BLACK54),
-            )
+            normal_title_style = ft.TextStyle(size=12, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD)
+            hover_title_style = ft.TextStyle(size=16, color=ft.colors.WHITE, weight=ft.FontWeight.BOLD, 
+                                             shadow=ft.BoxShadow(blur_radius=2, color=ft.colors.BLACK54))
             normal_badge_size = 40
             hover_badge_size = 50
 
@@ -44,8 +57,7 @@ class DebtsPage(ft.UserControl):
                         section.radius = normal_radius
                         section.title_style = normal_title_style
                         section.badge.width = normal_badge_size
-                        section.badge.height = normal_badge_size
-                        section.badge.border_radius = normal_badge_size / 2
+                        section.badge.height = normal_badge_size / 2
                 chart.update()
 
             chart = ft.PieChart(
@@ -81,6 +93,7 @@ class DebtsPage(ft.UserControl):
             alignment=ft.alignment.center,
         )
 
+        # Create data table with fetched data
         def create_data_table(title, data):
             return ft.Container(
                 content=ft.Column([
@@ -111,16 +124,24 @@ class DebtsPage(ft.UserControl):
 
         self.debt_table = create_data_table("Debt Details", self.debt_data)
 
+        # Add new debt to both MySQL and Flet table
         def add_debt(e):
             if not amount.value or not due_date.value:
                 return
-            
+
             new_debt = (
                 debt_type.value,
                 float(amount.value),
                 datetime.strptime(due_date.value, "%Y-%m-%d"),
                 status.value
             )
+            
+            # Insert new debt into MySQL
+            query = "INSERT INTO debts (user_id, type, amount, due_date, status) VALUES (%s, %s, %s, %s, %s)"
+            cursor.execute(query, (self.user_id, *new_debt))
+            con.commit()
+
+            # Update Flet table with new debt
             self.debt_data.append(new_debt)
             self.debt_table.content.controls[1].rows.append(
                 ft.DataRow(
@@ -136,6 +157,7 @@ class DebtsPage(ft.UserControl):
             due_date.value = ""
             self.debt_table.update()
 
+        # Input fields for adding debt
         amount = ft.TextField(label="Amount", width=150)
         debt_type = ft.Dropdown(
             label="Type",
@@ -161,6 +183,7 @@ class DebtsPage(ft.UserControl):
             alignment=ft.MainAxisAlignment.CENTER,
         )
 
+        # Main content layout
         main_content = ft.Column([
             ft.Text("Debt Overview", size=32, weight=ft.FontWeight.BOLD),
             ft.Row([debt_chart, self.debt_table], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
@@ -168,14 +191,14 @@ class DebtsPage(ft.UserControl):
         ], scroll=ft.ScrollMode.AUTO)
 
         return main_content
-    
+
 def main(page: ft.Page):
     page.title = "Personal Finance Tracker"
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 10
     page.scroll = ft.ScrollMode.AUTO
     
-    debts_page = DebtsPage()
+    debts_page = DebtsPage("test")
     page.add(debts_page)
 
 ft.app(target=main)
